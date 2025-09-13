@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JISC Typing Master</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1e293b;
+            --card-bg: #ffffff;
+            --accent-color: #4f46e5;
+            --secondary-text: #6b7280;
+            --error-color: #ef4444;
+            --correct-color: #16a34a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--accent-color);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .label {
+            font-size: 0.875rem;
+            color: var(--secondary-text);
+            margin-bottom: 4px;
+        }
+
+        .stat-item .value {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .typing-area {
+            position: relative;
+            padding: 24px;
+            border-radius: 12px;
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            min-height: 200px;
+        }
+
+        .text-display {
+            line-height: 1.6;
+            font-size: 1.5rem;
+            word-wrap: break-word;
+            user-select: none;
+            cursor: text;
+            /* Allow scrolling for the full story */
+            overflow-y: auto;
+            max-height: 50vh; /* Set a max height to enable scrolling on smaller screens */
+        }
+        
+        .char.current {
+            background-color: #fde047;
+            color: #000;
+            border-radius: 4px;
+        }
+
+        .char.correct {
+            color: var(--correct-color);
+        }
+
+        .char.incorrect {
+            color: var(--error-color);
+            background-color: #fee2e2;
+            border-radius: 4px;
+        }
+        
+        .progress-container {
+            height: 8px;
+            background-color: #e2e8f0;
+            border-radius: 4px;
+            margin-top: 16px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--accent-color);
+            border-radius: 4px;
+            width: 0;
+            transition: width 0.3s ease-in-out;
+        }
+
+        .input-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .btn:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .history-panel {
+            margin-top: 24px;
+        }
+
+        .history-panel h2 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+
+        .history-table th, .history-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .history-table th {
+            font-weight: 600;
+            color: var(--secondary-text);
+        }
+
+        .clear-history-btn {
+            background-color: var(--error-color);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-top: 16px;
+        }
+        
+        /* Print Styles for Certificate */
+        @media print {
+            body > *:not(#certificate-content) {
+                display: none;
+            }
+
+            #certificate-content {
+                display: block;
+                width: 100%;
+                margin: 0 auto;
+                padding: 40px;
+                box-sizing: border-box;
+            }
+
+            .certificate-container {
+                border: 5px solid var(--accent-color);
+                padding: 40px;
+                text-align: center;
+                border-radius: 20px;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            }
+
+            .certificate-container h1 {
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+                color: var(--accent-color);
+            }
+
+            .certificate-container h2 {
+                font-size: 1.5rem;
+                margin-top: 40px;
+            }
+
+            .certificate-stats p {
+                font-size: 1.2rem;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>JIS COLLEGE Typing Master</h1>
+    </div>
+
+    <!-- Controls are now at the top -->
+    <div class="controls">
+        <button class="btn" id="start-btn">Start</button>
+        <button class="btn" id="stop-btn" disabled>Stop</button>
+        <button class="btn" id="restart-btn" disabled>Restart</button>
+        <button class="btn" id="print-btn" disabled>Print Certificate</button>
+    </div>
+
+    <div class="card stats-grid">
+        <div class="stat-item">
+            <div class="label">WPM</div>
+            <div class="value" id="wpm">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="label">Accuracy</div>
+            <div class="value" id="accuracy">100%</div>
+        </div>
+        <div class="stat-item">
+            <div class="label">Time</div>
+            <div class="value" id="time">0s</div>
+        </div>
+        <div class="stat-item">
+            <div class="label">Errors</div>
+            <div class="value" id="errors">0</div>
+        </div>
+    </div>
+
+    <div class="typing-area card" id="typing-area">
+        <!-- Text display now shows the full story and can scroll -->
+        <div class="text-display" id="text-display"></div>
+        <input type="text" class="input-area" id="input-area" autofocus autocomplete="off" autocapitalize="off" disabled>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </div>
+    
+    <div class="card history-panel">
+        <h2>History</h2>
+        <div id="history-container">
+            <table class="history-table" id="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>WPM</th>
+                        <th>Accuracy</th>
+                        <th>Duration</th>
+                        <th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <!-- History records will be inserted here -->
+                </tbody>
+            </table>
+            <button class="clear-history-btn" id="clear-history-btn">Clear History</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // The story text provided by the user.
+    const storyText = `Jahanara Israil School & College (JISC) in Barishal was founded by the visionary educationist and philanthropist, Mr. Saleh M. Sheley, who dreamed of bringing quality English-medium education to southern Bangladesh. Before JISC, students from Barishal had to travel to Dhaka to access international-standard education, but Mr. Sheley believed that every child deserved the opportunity to learn in a modern, holistic environment close to home. His vision was to create a school that combined academic excellence, character building, and extracurricular development, ensuring students could grow into thoughtful, capable, and confident individuals.
+
+On December 1, 2008, the foundation stone of JISC was laid, with significant contributions from Mr. Sheley and his siblings—Saleh M. Solaiman, Saleh M. Hossain, Saleh A.F. Rahman, and Sultana J. Bhuyan. The family donated the land for the school, and their support ensured that construction and facilities met international standards. The planning included spacious classrooms, modern science laboratories, computer labs, a library, and sports grounds, all designed to provide students with a comprehensive learning experience.
+
+After two years of meticulous planning and construction, the school was officially inaugurated on December 28, 2010, by Advocate Showkat Hossain Hiron, the former Mayor of Barishal City. The opening marked a new era in education for the region, and the first batch of students quickly settled into their vibrant classrooms. From the beginning, JISC aimed to provide an environment that encouraged curiosity, creativity, and discipline.
+
+The school’s infrastructure reflected its commitment to quality education. Classrooms were designed to be bright and airy, equipped with modern teaching aids. The library offered a wide range of books to foster reading and research skills. Science laboratories were built to encourage hands-on experimentation, and computer labs provided students with access to modern technology. Outdoor facilities, including playgrounds and sports fields, promoted physical fitness and teamwork.
+
+Academically, JISC followed the English National Curriculum, guiding students from Playgroup to College through a well-rounded education. The curriculum emphasized critical thinking, problem-solving, and creativity, alongside traditional academic subjects. Teachers focused on individualized learning, ensuring that every student could progress at their own pace and discover their own talents.
+
+Student life at JISC was lively and engaging. The school offered various clubs and activities, such as debate, music, art, science, and sports. Annual events like the Sports Day, Cultural Festival, and Science Fair allowed students to showcase their talents, build confidence, and develop a sense of teamwork. Teachers encouraged participation in extracurricular activities as a way to nurture creativity, leadership, and social skills.
+
+Community engagement was a key part of JISC’s philosophy. Students regularly participated in social initiatives, including tree planting, cleanliness drives, and charity events. These programs instilled values of empathy, responsibility, and civic awareness, teaching students that education was not just about grades but also about making a positive impact on society.
+
+The school also faced challenges, such as the global COVID-19 pandemic. However, JISC demonstrated resilience by quickly transitioning to online learning. Virtual classrooms, interactive lessons, and digital resources ensured uninterrupted education. Students and teachers adapted to technology-enhanced learning, and the school used this period to strengthen its digital infrastructure for future educational innovation.
+
+Over the years, JISC has produced many outstanding alumni who excelled in academics, sports, and creative fields. Graduates frequently achieved top positions in national and international examinations, and many returned to share their experiences with current students. Their achievements reflected the school’s commitment to nurturing excellence and inspiring the next generation of learners.
+
+Today, Jahanara Israil School & College stands as a symbol of quality education in Barishal. The legacy of Mr. Saleh M. Sheley and the dedication of the teaching staff have created an institution where students are encouraged to learn, grow, and explore their full potential. JISC continues to expand, innovate, and inspire, ensuring that every student who passes through its gates leaves with knowledge, confidence, and the values needed to succeed in life.`;
+    
+    // --- State Variables ---
+    let characterIndex = 0; // Index within the full story
+    let totalCharactersTyped = 0; // Total characters typed across all pages
+    let startTime = null;
+    let timerInterval = null;
+    let errors = 0;
+    let isTypingActive = false;
+    let finalStats = {};
+
+    // --- DOM Elements ---
+    const textDisplay = document.getElementById('text-display');
+    const inputArea = document.getElementById('input-area');
+    const wpmSpan = document.getElementById('wpm');
+    const accuracySpan = document.getElementById('accuracy');
+    const timeSpan = document.getElementById('time');
+    const errorsSpan = document.getElementById('errors');
+    const progressBar = document.getElementById('progress-bar');
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const printBtn = document.getElementById('print-btn');
+    const historyBody = document.getElementById('history-body');
+    const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+    // --- Audio for incorrect keystrokes ---
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const playErrorSound = () => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 220;
+        gainNode.gain.value = 0.1;
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start(0);
+        oscillator.stop(0.1);
+    };
+
+    // --- Core Functions ---
+
+    /**
+     * Renders the entire story.
+     */
+    const renderStory = () => {
+        textDisplay.innerHTML = "";
+        storyText.split('').forEach(char => {
+            const span = document.createElement('span');
+            span.textContent = char;
+            span.classList.add('char');
+            textDisplay.appendChild(span);
+        });
+        if (textDisplay.children.length > 0) {
+            textDisplay.children[0].classList.add('current');
+        }
+    };
+    
+    /**
+     * Starts a new typing session.
+     */
+    const startSession = () => {
+        isTypingActive = true;
+        inputArea.disabled = false;
+        inputArea.focus();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        restartBtn.disabled = false;
+        printBtn.disabled = true;
+
+        // Reset stats for a new session
+        characterIndex = 0;
+        totalCharactersTyped = 0;
+        errors = 0;
+        finalStats = {};
+        
+        // Reset UI
+        wpmSpan.textContent = '0';
+        accuracySpan.textContent = '100%';
+        timeSpan.textContent = '0s';
+        errorsSpan.textContent = '0';
+        updateProgressBar();
+        
+        renderStory();
+
+        startTime = new Date().getTime();
+        timerInterval = setInterval(updateStats, 1000);
+    };
+    
+    /**
+     * Stops the current typing session and saves the results.
+     */
+    const stopSession = () => {
+        if (!isTypingActive) return;
+
+        clearInterval(timerInterval);
+        isTypingActive = false;
+        inputArea.disabled = true;
+        
+        const currentTime = new Date().getTime();
+        const elapsedTime = (currentTime - startTime) / 1000;
+        const minutes = elapsedTime / 60;
+        const wpm = minutes > 0 ? Math.round((totalCharactersTyped / 5) / minutes) : 0;
+        const accuracy = totalCharactersTyped > 0 ? Math.round(((totalCharactersTyped - errors) / totalCharactersTyped) * 100) : 100;
+        
+        finalStats = {
+            wpm: wpm,
+            accuracy: accuracy,
+            duration: Math.round(elapsedTime),
+            errors: errors
+        };
+
+        const sessionRecord = {
+            date: new Date().toLocaleString(),
+            ...finalStats
+        };
+        saveToHistory(sessionRecord);
+        renderHistory();
+
+        // Update final stats on screen
+        wpmSpan.textContent = finalStats.wpm;
+        accuracySpan.textContent = `${finalStats.accuracy}%`;
+        timeSpan.textContent = `${finalStats.duration}s`;
+        errorsSpan.textContent = finalStats.errors;
+        
+        // Reset UI for a new start
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        printBtn.disabled = false;
+        inputArea.value = '';
+    };
+
+    /**
+     * Resets the current session without saving.
+     */
+    const restartSession = () => {
+        clearInterval(timerInterval);
+        isTypingActive = false;
+        characterIndex = 0;
+        totalCharactersTyped = 0;
+        errors = 0;
+        finalStats = {};
+        
+        wpmSpan.textContent = '0';
+        accuracySpan.textContent = '100%';
+        timeSpan.textContent = '0s';
+        errorsSpan.textContent = '0';
+        updateProgressBar();
+
+        renderStory();
+        inputArea.value = '';
+        inputArea.disabled = true;
+        
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        printBtn.disabled = true;
+    };
+
+    /**
+     * Calculates and updates the performance stats (WPM, Accuracy, Time).
+     */
+    const updateStats = () => {
+        if (!startTime) return;
+        const currentTime = new Date().getTime();
+        const elapsedTime = (currentTime - startTime) / 1000;
+        const minutes = elapsedTime / 60;
+        const wpm = minutes > 0 ? Math.round((totalCharactersTyped / 5) / minutes) : 0;
+        const accuracy = totalCharactersTyped > 0 ? Math.round(((totalCharactersTyped - errors) / totalCharactersTyped) * 100) : 100;
+
+        wpmSpan.textContent = wpm;
+        accuracySpan.textContent = `${accuracy}%`;
+        timeSpan.textContent = `${Math.round(elapsedTime)}s`;
+        errorsSpan.textContent = errors;
+    };
+
+    /**
+     * Updates the progress bar based on total characters typed.
+     */
+    const updateProgressBar = () => {
+        const progress = (totalCharactersTyped / storyText.length) * 100;
+        progressBar.style.width = `${progress}%`;
+    };
+    
+    // --- History Management ---
+    const HISTORY_LOCAL_STORAGE_KEY = 'typingHistory';
+
+    const saveToHistory = (record) => {
+        const history = JSON.parse(localStorage.getItem(HISTORY_LOCAL_STORAGE_KEY)) || [];
+        history.push(record);
+        localStorage.setItem(HISTORY_LOCAL_STORAGE_KEY, JSON.stringify(history));
+    };
+
+    const renderHistory = () => {
+        const history = JSON.parse(localStorage.getItem(HISTORY_LOCAL_STORAGE_KEY)) || [];
+        historyBody.innerHTML = '';
+        
+        history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        history.forEach(session => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${session.date}</td>
+                <td>${session.wpm}</td>
+                <td>${session.accuracy}%</td>
+                <td>${session.duration}s</td>
+                <td>${session.errors}</td>
+            `;
+            historyBody.appendChild(row);
+        });
+    };
+
+    const clearHistory = () => {
+        localStorage.removeItem(HISTORY_LOCAL_STORAGE_KEY);
+        renderHistory();
+    };
+
+    // --- Certificate Printing ---
+    const printCertificate = () => {
+        if (!finalStats.wpm) {
+            alert("Please complete a typing session first.");
+            return;
+        }
+
+        const certificateContent = `
+            <div class="certificate-container" style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; border: 5px solid #4f46e5; border-radius: 20px;">
+                <h1 style="color: #4f46e5; font-size: 2.5rem; text-align: center; margin-bottom: 20px;">Certificate of Typing Excellence</h1>
+                <p style="font-size: 1.2rem; text-align: center;">This certifies that</p>
+                <h2 style="font-size: 2rem; text-align: center; margin: 20px 0; border-bottom: 2px dashed #ccc; padding-bottom: 10px;">_________________________</h2>
+                <p style="font-size: 1.2rem; text-align: center;">has successfully completed a typing session and demonstrated proficiency in typing.</p>
+                <div style="margin-top: 40px; display: flex; justify-content: space-around; flex-wrap: wrap;">
+                    <div style="text-align: center; margin: 10px;">
+                        <p style="font-size: 1.5rem; font-weight: bold; color: #4f46e5;">WPM</p>
+                        <p style="font-size: 2rem;">${finalStats.wpm}</p>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <p style="font-size: 1.5rem; font-weight: bold; color: #4f46e5;">Accuracy</p>
+                        <p style="font-size: 2rem;">${finalStats.accuracy}%</p>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <p style="font-size: 1.5rem; font-weight: bold; color: #4f46e5;">Time</p>
+                        <p style="font-size: 2rem;">${finalStats.duration}s</p>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <p style="font-size: 1.5rem; font-weight: bold; color: #4f46e5;">Errors</p>
+                        <p style="font-size: 2rem;">${finalStats.errors}</p>
+                    </div>
+                </div>
+                <p style="font-size: 1rem; text-align: center; margin-top: 40px;">Dated: ${new Date().toLocaleDateString()}</p>
+            </div>
+        `;
+        
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write('<html><head><title>Typing Certificate</title></head><body>');
+        printWindow.document.write(certificateContent);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+    };
+
+    // --- Event Handlers ---
+    document.addEventListener('keydown', (e) => {
+        if (!isTypingActive && !inputArea.disabled) {
+            inputArea.focus();
+        }
+    });
+
+    inputArea.addEventListener('keydown', (e) => {
+        if (!isTypingActive) {
+            e.preventDefault();
+            return;
+        }
+        
+        if (e.key === 'Backspace') {
+            e.preventDefault();
+            if (characterIndex > 0) {
+                const prevChar = textDisplay.children[characterIndex - 1];
+                if (prevChar.classList.contains('incorrect')) {
+                    errors--;
+                }
+                prevChar.classList.remove('correct', 'incorrect', 'current');
+                
+                characterIndex--;
+                totalCharactersTyped--;
+                
+                const newCurrentChar = textDisplay.children[characterIndex];
+                newCurrentChar.classList.add('current');
+                
+                // Scroll into view if needed
+                newCurrentChar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                updateStats();
+                updateProgressBar();
+            }
+            return;
+        }
+
+        if (e.key.length > 1) {
+            return;
+        }
+
+        const typedChar = e.key;
+        const expectedChar = storyText[characterIndex];
+        const currentCharElement = textDisplay.children[characterIndex];
+
+        if (typedChar === expectedChar) {
+            currentCharElement.classList.add('correct');
+        } else {
+            currentCharElement.classList.add('incorrect');
+            playErrorSound();
+            errors++;
+        }
+
+        currentCharElement.classList.remove('current');
+        characterIndex++;
+        totalCharactersTyped++;
+        
+        if (characterIndex < storyText.length) {
+            const nextCharElement = textDisplay.children[characterIndex];
+            nextCharElement.classList.add('current');
+            // Scroll into view if needed
+            nextCharElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            // End of the entire story
+            stopSession();
+        }
+        
+        updateStats();
+        updateProgressBar();
+    });
+
+    // --- Button Event Listeners ---
+    startBtn.addEventListener('click', startSession);
+    stopBtn.addEventListener('click', stopSession);
+    restartBtn.addEventListener('click', restartSession);
+    printBtn.addEventListener('click', printCertificate);
+    clearHistoryBtn.addEventListener('click', clearHistory);
+    
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        renderStory();
+        renderHistory();
+        startBtn.disabled = false;
+        restartBtn.disabled = true;
+    });
+
+</script>
+
+</body>
+</html>
